@@ -29,6 +29,8 @@ var MenuPlans = map[string]interface{}{
 
 		{"name": "id", "type": "char", "length": 36},
 		{"name": "date", "type": "char", "length": 14},
+		{"name": "number", "type": "char", "length": 14},
+		{"name": "deletion_mark", "type": "int", "length": 1},
 	},
 	"tables": map[string]interface{}{
 		"products": []map[string]interface{}{
@@ -53,16 +55,35 @@ func Copy(sourceTable map[string]interface{}) map[string]interface{} {
 
 	tu := map[string]interface{}{}
 
-	fields := sourceTable["fields"].([]interface{})
+	fields := sourceTable["fields"].([]map[string]interface{})
 
 	tu["name"] = sourceTable["name"]
 	tu["fields"] = make([]interface{}, len(fields))
 
 	for i := 0; i < len(fields); i++ {
 
-		field := fields[i].(map[string]interface{})
+		field := fields[i]
 
 		tu["fields"].([]interface{})[i] = map[string]interface{}{"name": field["name"], "type": field["type"], "length": field["length"]}
+
+	}
+
+	return tu
+}
+
+func CopyTables(table map[string]interface{}) map[string]interface{} {
+
+	tu := map[string]interface{}{}
+
+	for tableName, fields := range table["tables"].(map[string]interface{}) {
+
+		ct := map[string]interface{}{
+
+			"name":   tableName,
+			"fields": fields,
+		}
+
+		tu[tableName] = Copy(ct)
 
 	}
 

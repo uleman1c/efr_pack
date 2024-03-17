@@ -34,7 +34,7 @@ func Init(sq string) error {
 
 	if false {
 
-		statement, err := tx.Prepare("DROP TABLE outcome_orders_products_by_orders")
+		statement, err := tx.Prepare("DROP TABLE menu_plans")
 
 		if err != nil {
 			return err
