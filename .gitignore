@@ -1,2 +1,3 @@
 efr_pack.db
-main.exe
+*.exe
+efr_pack.db*
