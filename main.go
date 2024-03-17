@@ -1,6 +1,10 @@
 package main
 
-import "log"
+import (
+	tables "efr_pack/db"
+	"fmt"
+	"log"
+)
 
 func main() {
 
@@ -13,6 +17,15 @@ func main() {
 }
 
 func run() error {
+
+	tu := tables.Copy(tables.Users)
+
+	tu["fields"].([]interface{})[0].(map[string]interface{})["name"] = "sdrgjkhkjhdskj"
+
+	fmt.Println(tu)
+	fmt.Println(tables.Users)
+
+	tables.Init("sqlite")
 
 	return nil
 
