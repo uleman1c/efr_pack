@@ -3,48 +3,50 @@ package tables
 var Users = map[string]interface{}{
 
 	"name": "users",
-	"fields": []interface{}{
+	"fields": []map[string]interface{}{
 
-		map[string]interface{}{"name": "id", "type": "char", "length": 36},
-		map[string]interface{}{"name": "name", "type": "char", "length": 50},
-		map[string]interface{}{"name": "pwd", "type": "char", "length": 20},
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "name", "type": "char", "length": 50},
+		{"name": "pwd", "type": "char", "length": 20},
 	},
 }
 
 var Products = map[string]interface{}{
 
 	"name": "products",
-	"fields": []interface{}{
+	"fields": []map[string]interface{}{
 
-		map[string]interface{}{"name": "id", "type": "char", "length": 36},
-		map[string]interface{}{"name": "name", "type": "char", "length": 50},
-		map[string]interface{}{"name": "full_name", "type": "char", "length": 150},
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "name", "type": "char", "length": 50},
+		{"name": "full_name", "type": "char", "length": 150},
 	},
 }
 
 var MenuPlans = map[string]interface{}{
 
 	"name": "menu_plans",
-	"fields": []interface{}{
+	"fields": []map[string]interface{}{
 
-		map[string]interface{}{"name": "id", "type": "char", "length": 36},
-		map[string]interface{}{"name": "date", "type": "char", "length": 14},
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "date", "type": "char", "length": 14},
 	},
 	"tables": map[string]interface{}{
-		"products": []interface{}{
+		"products": []map[string]interface{}{
 
-			map[string]interface{}{"name": "id", "type": "char", "length": 36},
-			map[string]interface{}{"name": "doc_id", "type": "char", "length": 36},
-			map[string]interface{}{"name": "line_number", "type": "int", "length": 5},
-			map[string]interface{}{"name": "product_id", "type": "char", "length": 36},
-			map[string]interface{}{"name": "quantity", "type": "int", "length": 10},
+			{"name": "id", "type": "char", "length": 36},
+			{"name": "doc_id", "type": "char", "length": 36},
+			{"name": "line_number", "type": "int", "length": 5},
+			{"name": "product_id", "type": "char", "length": 36},
+			{"name": "quantity", "type": "int", "length": 10},
 		},
 	},
 }
 
-var Tables = []interface{}{
+var Tables = map[string]map[string]interface{}{
 
-	Users, Products, MenuPlans,
+	"Users":     Users,
+	"Products":  Products,
+	"MenuPlans": MenuPlans,
 }
 
 func Copy(sourceTable map[string]interface{}) map[string]interface{} {

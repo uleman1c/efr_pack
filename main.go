@@ -2,7 +2,6 @@ package main
 
 import (
 	tables "efr_pack/db"
-	"fmt"
 	"log"
 )
 
@@ -18,15 +17,26 @@ func main() {
 
 func run() error {
 
-	tu := tables.Copy(tables.Users)
+	var err error = nil
 
-	tu["fields"].([]interface{})[0].(map[string]interface{})["name"] = "sdrgjkhkjhdskj"
+	err = tables.Init("sqlite")
 
-	fmt.Println(tu)
-	fmt.Println(tables.Users)
+	if err != nil {
+		return err
+	}
 
-	tables.Init("sqlite")
+	err = tables.GetChangesFromCentral()
+	if err != nil {
+		return err
+	}
 
-	return nil
+	/* 	tu := tables.Copy(tables.Users)
+
+	   	tu["fields"].([]interface{})[0].(map[string]interface{})["name"] = "sdrgjkhkjhdskj"
+
+	   	fmt.Println(tu)
+	   	fmt.Println(tables.Users)
+	*/
+	return err
 
 }

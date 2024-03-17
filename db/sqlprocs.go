@@ -44,9 +44,7 @@ func Init(sq string) error {
 
 	}
 
-	for _, t := range Tables {
-
-		table := t.(map[string]interface{})
+	for _, table := range Tables {
 
 		statement, err := tx.Prepare(GetCreateQuery(table))
 
@@ -54,7 +52,10 @@ func Init(sq string) error {
 			return err
 		}
 
-		statement.Exec()
+		_, err = statement.Exec()
+		if err != nil {
+			return err
+		}
 
 		subTables := table["tables"]
 
@@ -73,7 +74,10 @@ func Init(sq string) error {
 					return err
 				}
 
-				statement.Exec()
+				_, err = statement.Exec()
+				if err != nil {
+					return err
+				}
 
 			}
 
@@ -94,16 +98,14 @@ func GetCreateQuery(table map[string]interface{}) string {
 
 		fields := []string{}
 
-		for _, field := range table["fields"].([]interface{}) {
-
-			curField := field.(map[string]interface{})
+		for _, field := range table["fields"].([]map[string]interface{}) {
 
 			key := ""
-			if curField["name"] == "id" {
+			if field["name"] == "id" {
 				key = "PRIMARY KEY"
 			}
 
-			fields = append(fields, curField["name"].(string)+" "+curField["type"].(string)+" "+key)
+			fields = append(fields, field["name"].(string)+" "+field["type"].(string)+" "+key)
 
 		}
 
@@ -112,6 +114,128 @@ func GetCreateQuery(table map[string]interface{}) string {
 	}
 
 	return result
+
+}
+
+func GetSelectQuery(table map[string]interface{}, filters []map[string]interface{}) string {
+
+	result := ""
+
+	tableName := table["name"].(string)
+
+	switch SqlType {
+	case "sqlite":
+
+		fields := []string{}
+
+		for _, field := range table["fields"].([]map[string]interface{}) {
+
+			fields = append(fields, tableName+"."+field["name"].(string))
+
+		}
+
+		filterStrings := []string{}
+
+		for _, filter := range filters {
+
+			filterStrings = append(filterStrings, filter["text"].(string))
+
+		}
+
+		result = "SELECT " + strings.Join(fields, ",") + " FROM " + tableName
+
+		if len(filterStrings) > 0 {
+
+			result += " WHERE " + strings.Join(filterStrings, " and ")
+
+		}
+
+	}
+
+	return result
+
+}
+
+func GetInsertQuery(table map[string]interface{}) string {
+
+	result := ""
+
+	switch SqlType {
+	case "sqlite":
+
+		fields := []string{}
+		values := []string{}
+
+		for _, field := range table["fields"].([]map[string]interface{}) {
+
+			fields = append(fields, field["name"].(string))
+			values = append(values, "?")
+
+		}
+
+		result = "INSERT INTO " + table["name"].(string) + " (" + strings.Join(fields, ",") + ") VALUES (" + strings.Join(values, ",") + ")"
+
+	}
+
+	return result
+
+}
+
+func GetDeleteQuery(tableName string, filters []map[string]interface{}) string {
+
+	result := ""
+
+	switch SqlType {
+	case "sqlite":
+
+		result = "DELETE FROM " + tableName
+
+		filterStrings := []string{}
+
+		for _, filter := range filters {
+
+			filterStrings = append(filterStrings, filter["text"].(string))
+
+		}
+
+		if len(filterStrings) > 0 {
+
+			result += " WHERE " + strings.Join(filterStrings, " and ")
+
+		}
+
+	}
+
+	return result
+
+}
+
+func GetInsertQuerySub(tableName string, params map[string]interface{}) (string, []interface{}) {
+
+	result := ""
+
+	sqlParams := []interface{}{}
+
+	switch SqlType {
+	case "sqlite":
+
+		fields := []string{}
+		values := []string{}
+
+		for field, value := range params {
+
+			fields = append(fields, field)
+			values = append(values, "?")
+
+			sqlParams = append(sqlParams, value)
+
+		}
+
+		result = "INSERT INTO " + tableName + " (" + strings.Join(fields, ",") + ") VALUES (" + strings.Join(values, ",") + ")"
+
+	}
+
+	return result, sqlParams
 
 }
 
