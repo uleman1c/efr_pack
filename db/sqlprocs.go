@@ -239,6 +239,321 @@ func GetInsertQuerySub(tableName string, params map[string]interface{}) (string,
 
 }
 
+func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interface{}, top, order, group string) string {
+
+	result := ""
+
+	tableName := table["name"].(string)
+
+	switch SqlType {
+	case "sqlite":
+
+		fields := []string{}
+
+		for _, field := range table["fields"].([]map[string]interface{}) {
+
+			fields = append(fields, tableName+"."+field["name"].(string))
+
+		}
+
+		filterStrings := []string{}
+
+		for _, filter := range filters {
+
+			filterStrings = append(filterStrings, filter["text"].(string))
+
+		}
+
+		result = "SELECT " + strings.Join(fields, ",") + " FROM " + tableName
+
+		if len(filterStrings) > 0 {
+
+			result += " WHERE " + strings.Join(filterStrings, " and ")
+
+		}
+
+		if group != "" {
+			result += " GROUP BY " + group
+		}
+
+		if order != "" {
+			result += " ORDER BY " + order
+		}
+
+		if top != "" {
+			result += " LIMIT " + top
+		} else {
+
+			result += " LIMIT 20"
+		}
+
+	}
+
+	return result
+
+}
+
+func GetParamsValuesFromFilter(filters []map[string]interface{}) []interface{} {
+
+	result := []interface{}{}
+
+	for _, filter := range filters {
+
+		result = append(result, filter["parameter"].(map[string]interface{})["value"])
+
+	}
+
+	return result
+
+}
+func GetTableWithParams(table map[string]interface{}, filter []map[string]interface{}, top, order, group string) ([]map[string]interface{}, error) {
+
+	var err error = nil
+
+	result := []map[string]interface{}{}
+
+	tx, err := Db.Begin()
+	if err != nil {
+		return result, err
+	}
+
+	defer tx.Commit()
+
+	statement, err := tx.Prepare(GetSelectQueryTOG(table, filter, top, order, group))
+	if err != nil {
+		return result, err
+	}
+
+	cp := GetParamsValuesFromFilter(filter)
+
+	var rows *sql.Rows = nil
+
+	rows, err = statement.Query(cp...)
+
+	columns, _ := rows.Columns()
+	count := len(columns)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+
+	for i := range columns {
+		valuePtrs[i] = &values[i]
+	}
+
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+
+	//fields := table["fields"].([]map[string]interface{})
+
+	//lenRecord := len(fields)
+
+	for rows.Next() {
+
+		rows.Scan(valuePtrs...)
+
+		rec := map[string]interface{}{}
+
+		for i, col := range columns {
+			val := values[i]
+
+			b, ok := val.([]byte)
+			var v interface{}
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+
+			rec[col] = v
+
+		}
+
+		// item := make([]interface{}, lenRecord)
+
+		// switch lenRecord {
+		// case 1:
+		// 	{
+
+		// 		err = rows.Scan(&item[0])
+
+		// 	}
+		// case 2:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1])
+
+		// 	}
+		// case 3:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2])
+
+		// 	}
+		// case 4:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3])
+
+		// 	}
+		// case 5:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4])
+
+		// 	}
+		// case 6:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5])
+
+		// 	}
+		// case 7:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6])
+
+		// 	}
+		// case 8:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7])
+
+		// 	}
+		// case 9:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8])
+
+		// 	}
+		// case 10:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9])
+
+		// 	}
+		// case 11:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10])
+
+		// 	}
+		// case 12:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11])
+
+		// 	}
+		// case 13:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11], &item[12])
+
+		// 	}
+		// case 14:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11], &item[12], &item[13])
+
+		// 	}
+		// case 15:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
+		// 			&item[10], &item[11], &item[12], &item[13], &item[14])
+
+		// 	}
+		// case 16:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
+		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15])
+
+		// 	}
+		// case 17:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
+		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16])
+
+		// 	}
+		// case 18:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
+		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17])
+
+		// 	}
+		// case 19:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
+		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17], &item[18])
+
+		// 	}
+		// case 20:
+		// 	{
+
+		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
+		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17], &item[18], &item[19])
+
+		// 	}
+		// }
+
+		// for i, field := range fields {
+
+		// 	rec[field["name"].(string)] = item[i]
+
+		// }
+
+		result = append(result, rec)
+
+	}
+
+	return result, err
+
+}
+
+func GetTableData(table map[string]interface{}) ([]map[string]interface{}, error) {
+
+	filter := []map[string]interface{}{}
+
+	filterStr := ""
+	_, ok := table["filter"]
+	if ok {
+		filterStr = table["filter"].(string)
+	}
+
+	if filterStr != "" {
+
+		kv := strings.Split(filterStr, " eq ")
+
+		filter = append(filter, map[string]interface{}{"text": kv[0] + " = ?", "parameter": map[string]interface{}{"name": kv[0], "value": kv[1]}})
+
+	}
+
+	top := ""
+	_, ok = table["top"]
+	if ok {
+		top = table["top"].(string)
+	}
+
+	order := ""
+	_, ok = table["order"]
+	if ok {
+		order = table["order"].(string)
+	}
+
+	group := ""
+	_, ok = table["group"]
+	if ok {
+		group = table["group"].(string)
+	}
+
+	return GetTableWithParams(Tables[table["name"].(string)], filter, top, order, group)
+
+}
+
 /*
 func GetConstantValue(name string) (*string, error) {
 

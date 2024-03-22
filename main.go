@@ -2,6 +2,7 @@ package main
 
 import (
 	tables "efr_pack/db"
+	"efr_pack/server"
 	"log"
 )
 
@@ -26,6 +27,11 @@ func run() error {
 	}
 
 	err = tables.GetChangesFromCentral()
+	if err != nil {
+		return err
+	}
+
+	err = server.Start()
 	if err != nil {
 		return err
 	}
