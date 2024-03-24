@@ -18,7 +18,12 @@ func StrToMap(in, delimeter string) map[string]interface{} {
 
 		for _, val := range array {
 			temp = strings.Split(string(val), "=")
-			res[temp[0]] = temp[1]
+
+			if len(temp) > 1 {
+				res[temp[0]] = temp[1]
+
+			}
+
 		}
 	}
 
@@ -49,19 +54,28 @@ func Start() error {
 
 			tm := StrToMap(ue, "&")
 
-			rows, err := tables.GetTableData(tm)
-
 			var js []byte = make([]byte, 0)
 
-			if err != nil {
+			_, ok := tm["name"]
+			if ok {
 
-				js, _ = json.Marshal(err)
+				rows, err := tables.GetTableData(tm)
 
+				if err != nil {
+
+					js, _ = json.Marshal(err)
+
+				} else {
+
+					js, _ = json.Marshal(rows)
+				}
 			} else {
 
-				js, _ = json.Marshal(rows)
-			}
+				js, err = json.Marshal(map[string]interface{}{
+					"error": "name required",
+				})
 
+			}
 			response.Header().Set("Content-Type", "application/json")
 			response.Write(js)
 
