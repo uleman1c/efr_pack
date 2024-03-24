@@ -22,6 +22,27 @@ var Products = map[string]interface{}{
 	},
 }
 
+var Containers = map[string]interface{}{
+
+	"name": "containers",
+	"fields": []map[string]interface{}{
+
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "name", "type": "char", "length": 50},
+	},
+}
+
+var Barcodes = map[string]interface{}{
+
+	"name": "barcodes",
+	"fields": []map[string]interface{}{
+
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "barcode", "type": "char", "length": 150},
+		{"name": "product_id", "type": "char", "length": 36},
+	},
+}
+
 var MenuPlans = map[string]interface{}{
 
 	"name": "menu_plans",
@@ -46,9 +67,11 @@ var MenuPlans = map[string]interface{}{
 
 var Tables = map[string]map[string]interface{}{
 
-	"Users":     Users,
-	"Products":  Products,
-	"MenuPlans": MenuPlans,
+	"Users":      Users,
+	"Products":   Products,
+	"Containers": Containers,
+	"Barcodes":   Barcodes,
+	"MenuPlans":  MenuPlans,
 }
 
 func Copy(sourceTable map[string]interface{}) map[string]interface{} {

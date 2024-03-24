@@ -153,6 +153,23 @@ func loadObject(change map[string]interface{}) (map[string]interface{}, error) {
 
 				}
 
+			case "Контейнеры":
+				{
+
+					result["name"] = "Контейнеры"
+
+					id := change["Ссылка"].(string)
+
+					result["id"] = id
+
+					params := map[string]interface{}{}
+					params["id"] = id
+					params["name"] = change["Наименование"]
+
+					err = UpdateObject(Tables["Containers"], params)
+
+				}
+
 			}
 
 		}
@@ -211,6 +228,53 @@ func loadObject(change map[string]interface{}) (map[string]interface{}, error) {
 
 		}
 
+	case "РегистрСведений":
+		{
+			result["type"] = "РегистрСведений"
+
+			switch change["Вид"] {
+
+			case "Штрихкоды":
+				{
+					result["name"] = "Штрихкоды"
+
+					reqvisits := change["Отбор"].(map[string]interface{})
+
+					result["id"] = reqvisits
+
+					params := map[string]interface{}{}
+					params["id"] = uuid.New().String()
+					params["barcode"] = reqvisits["Штрихкод"]
+					params["product_id"] = reqvisits["Владелец"].(map[string]interface{})["Ссылка"].(string)
+
+					filters := []map[string]interface{}{
+						{
+							"text": "barcode = ?",
+							"parameter": map[string]interface{}{
+								"name":  "barcode",
+								"value": params["barcode"],
+							},
+						},
+						{
+							"text": "product_id = ?",
+							"parameter": map[string]interface{}{
+								"name":  "product_id",
+								"value": params["product_id"],
+							},
+						},
+					}
+
+					err = ExecQuery(GetDeleteQuery(Tables["Barcodes"]["name"].(string), filters), filters)
+
+					if err != nil {
+						return result, err
+					}
+
+					err = UpdateObject(Tables["Barcodes"], params)
+
+				}
+			}
+		}
 	}
 	return result, err
 }
@@ -321,7 +385,7 @@ func UpdateObjectTables(mainTableName string, params map[string]interface{}) err
 		filters := []map[string]interface{}{
 			{
 				"text": "doc_id = ?",
-				"params": map[string]interface{}{
+				"parameter": map[string]interface{}{
 					"name":  "doc_id",
 					"value": params["id"],
 				},

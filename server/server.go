@@ -34,7 +34,7 @@ func Start() error {
 		fmt.Fprintf(response, "Hello "+request.RequestURI)
 	})
 
-	http.HandleFunc("/gettable", func(response http.ResponseWriter, request *http.Request) {
+	http.HandleFunc("/srv/gettable", func(response http.ResponseWriter, request *http.Request) {
 
 		if request.Method == "GET" {
 

@@ -306,6 +306,68 @@ func GetParamsValuesFromFilter(filters []map[string]interface{}) []interface{} {
 	return result
 
 }
+
+func GetQueryResult(queryStr string, params []interface{}) ([]interface{}, error) {
+
+	result := []interface{}{}
+
+	tx, err := Db.Begin()
+	if err != nil {
+		return result, err
+	}
+
+	defer tx.Commit()
+
+	statement, err := tx.Prepare(queryStr)
+	if err != nil {
+		return result, err
+	}
+
+	var rows *sql.Rows = nil
+
+	rows, err = statement.Query(params...)
+	if err != nil {
+		return result, err
+	}
+
+	columns, _ := rows.Columns()
+	count := len(columns)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+
+	for i := range columns {
+		valuePtrs[i] = &values[i]
+	}
+
+	for rows.Next() {
+
+		rows.Scan(valuePtrs...)
+
+		rec := map[string]interface{}{}
+
+		for i, col := range columns {
+			val := values[i]
+
+			b, ok := val.([]byte)
+			var v interface{}
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+
+			rec[col] = v
+
+		}
+
+		result = append(result, rec)
+
+	}
+
+	return result, err
+
+}
+
 func GetTableWithParams(table map[string]interface{}, filter []map[string]interface{}, top, order, group string) ([]map[string]interface{}, error) {
 
 	var err error = nil
@@ -329,6 +391,11 @@ func GetTableWithParams(table map[string]interface{}, filter []map[string]interf
 	var rows *sql.Rows = nil
 
 	rows, err = statement.Query(cp...)
+	if err != nil {
+		return result, err
+	}
+
+	defer rows.Close()
 
 	columns, _ := rows.Columns()
 	count := len(columns)
@@ -339,15 +406,6 @@ func GetTableWithParams(table map[string]interface{}, filter []map[string]interf
 		valuePtrs[i] = &values[i]
 	}
 
-	if err != nil {
-		return result, err
-	}
-	defer rows.Close()
-
-	//fields := table["fields"].([]map[string]interface{})
-
-	//lenRecord := len(fields)
-
 	for rows.Next() {
 
 		rows.Scan(valuePtrs...)
@@ -355,6 +413,7 @@ func GetTableWithParams(table map[string]interface{}, filter []map[string]interf
 		rec := map[string]interface{}{}
 
 		for i, col := range columns {
+
 			val := values[i]
 
 			b, ok := val.([]byte)
@@ -368,143 +427,6 @@ func GetTableWithParams(table map[string]interface{}, filter []map[string]interf
 			rec[col] = v
 
 		}
-
-		// item := make([]interface{}, lenRecord)
-
-		// switch lenRecord {
-		// case 1:
-		// 	{
-
-		// 		err = rows.Scan(&item[0])
-
-		// 	}
-		// case 2:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1])
-
-		// 	}
-		// case 3:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2])
-
-		// 	}
-		// case 4:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3])
-
-		// 	}
-		// case 5:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4])
-
-		// 	}
-		// case 6:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5])
-
-		// 	}
-		// case 7:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6])
-
-		// 	}
-		// case 8:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7])
-
-		// 	}
-		// case 9:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8])
-
-		// 	}
-		// case 10:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9])
-
-		// 	}
-		// case 11:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10])
-
-		// 	}
-		// case 12:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11])
-
-		// 	}
-		// case 13:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11], &item[12])
-
-		// 	}
-		// case 14:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11], &item[12], &item[13])
-
-		// 	}
-		// case 15:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-		// 			&item[10], &item[11], &item[12], &item[13], &item[14])
-
-		// 	}
-		// case 16:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15])
-
-		// 	}
-		// case 17:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16])
-
-		// 	}
-		// case 18:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17])
-
-		// 	}
-		// case 19:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17], &item[18])
-
-		// 	}
-		// case 20:
-		// 	{
-
-		// 		err = rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-		// 			&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17], &item[18], &item[19])
-
-		// 	}
-		// }
-
-		// for i, field := range fields {
-
-		// 	rec[field["name"].(string)] = item[i]
-
-		// }
 
 		result = append(result, rec)
 
@@ -551,6 +473,29 @@ func GetTableData(table map[string]interface{}) ([]map[string]interface{}, error
 	}
 
 	return GetTableWithParams(Tables[table["name"].(string)], filter, top, order, group)
+
+}
+
+func ExecQuery(query string, filter []map[string]interface{}) error {
+
+	tx, err := Db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Commit()
+
+	statement, _ := tx.Prepare(query)
+
+	params := GetParamsValuesFromFilter(filter)
+
+	_, err = statement.Exec(params...)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }
 
