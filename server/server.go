@@ -3,7 +3,6 @@ package server
 import (
 	tables "efr_pack/db"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,7 +30,15 @@ func Start() error {
 	var err error = nil
 
 	http.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {
-		fmt.Fprintf(response, "Hello "+request.RequestURI)
+
+		http.ServeFile(response, request, "./dist/index.html")
+
+	})
+
+	http.HandleFunc("/assets/", func(response http.ResponseWriter, request *http.Request) {
+
+		http.ServeFile(response, request, "./dist"+request.RequestURI)
+
 	})
 
 	http.HandleFunc("/srv/gettable", func(response http.ResponseWriter, request *http.Request) {
