@@ -36,7 +36,18 @@ func Start() error {
 
 	http.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {
 
-		http.ServeFile(response, request, "./dist/index.html")
+		res := ""
+
+		switch request.RequestURI {
+
+		case "":
+			res = "/index.html"
+		default:
+			res = request.RequestURI
+
+		}
+
+		http.ServeFile(response, request, "./dist"+res)
 
 	})
 
