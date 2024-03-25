@@ -43,6 +43,20 @@ var Barcodes = map[string]interface{}{
 	},
 }
 
+var Scanned = map[string]interface{}{
+
+	"name": "scanned",
+	"fields": []map[string]interface{}{
+
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "date", "type": "char", "length": 14},
+		{"name": "milliseconds", "type": "int", "length": 2},
+		{"name": "barcode", "type": "char", "length": 150},
+		{"name": "container_id", "type": "char", "length": 36},
+		{"name": "menu_plan_id", "type": "char", "length": 36},
+	},
+}
+
 var MenuPlans = map[string]interface{}{
 
 	"name": "menu_plans",
@@ -73,6 +87,8 @@ var Tables = map[string]map[string]interface{}{
 	"Barcodes":   Barcodes,
 	"MenuPlans":  MenuPlans,
 	"menu_plans": MenuPlans,
+	"Scanned":    Scanned,
+	"scanned":    Scanned,
 }
 
 func Copy(sourceTable map[string]interface{}) map[string]interface{} {
