@@ -241,7 +241,7 @@ func GetInsertQuerySub(tableName string, params map[string]interface{}) (string,
 
 }
 
-func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interface{}, top int, order, group []string) string {
+func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interface{}, top int, order, group []string, joins []map[string]string) string {
 
 	result := ""
 
@@ -254,6 +254,8 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 
 		for _, field := range table["fields"].([]interface{}) {
 
+			refTable := ""
+
 			fieldName := ""
 			switch field.(type) {
 
@@ -262,9 +264,44 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 			case map[string]interface{}:
 				fieldName = field.(map[string]interface{})["name"].(string)
 
+				_, ok := field.(map[string]interface{})["table"]
+
+				if ok {
+					refTable = field.(map[string]interface{})["table"].(string)
+				}
+
 			}
 
 			fields = append(fields, tableName+"."+fieldName)
+
+			if refTable != "" {
+
+				refAlias := refTable + strconv.Itoa(len(joins))
+
+				joins = append(joins, map[string]string{
+					"field": refAlias + ".name as " + fieldName + "_str",
+					"table": "left join " + refTable + " as " + refAlias + " on " + tableName + "." + fieldName + " = " + refAlias + ".id",
+				})
+
+			}
+
+		}
+
+		joinTables := []string{}
+
+		for _, joinsEl := range joins {
+
+			fields = append(fields, joinsEl["field"])
+
+			joinTables = append(joinTables, joinsEl["table"])
+
+		}
+
+		result = "SELECT " + strings.Join(fields, ",") + " FROM " + tableName
+
+		if len(joinTables) > 0 {
+
+			result += " " + strings.Join(joinTables, " ")
 
 		}
 
@@ -275,8 +312,6 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 			filterStrings = append(filterStrings, filter["text"].(string))
 
 		}
-
-		result = "SELECT " + strings.Join(fields, ",") + " FROM " + tableName
 
 		if len(filterStrings) > 0 {
 
@@ -382,7 +417,7 @@ func GetQueryResult(queryStr string, params []interface{}) ([]interface{}, error
 
 }
 
-func GetTableWithParams(table map[string]interface{}, filter []map[string]interface{}, top int, order, group []string) ([]map[string]interface{}, error) {
+func GetTableWithParams(table map[string]interface{}, filter []map[string]interface{}, top int, order, group []string, joins []map[string]string) ([]map[string]interface{}, error) {
 
 	var err error = nil
 
@@ -395,7 +430,7 @@ func GetTableWithParams(table map[string]interface{}, filter []map[string]interf
 
 	defer tx.Commit()
 
-	statement, err := tx.Prepare(GetSelectQueryTOG(table, filter, top, order, group))
+	statement, err := tx.Prepare(GetSelectQueryTOG(table, filter, top, order, group, joins))
 	if err != nil {
 		return result, err
 	}
@@ -526,7 +561,19 @@ func GetTableData(inpTable map[string]interface{}) ([]map[string]interface{}, er
 		}
 	}
 
-	return GetTableWithParams(table, filter, top, order, group)
+	joins := []map[string]string{}
+	_, ok = inpTable["joins"]
+	if ok {
+
+		for _, joinsEl := range inpTable["joins"].([]interface{}) {
+
+			joins = append(joins, joinsEl.(map[string]string))
+
+		}
+
+	}
+
+	return GetTableWithParams(table, filter, top, order, group, joins)
 
 }
 
