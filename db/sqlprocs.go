@@ -2,7 +2,6 @@ package tables
 
 import (
 	"database/sql"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -65,7 +64,7 @@ func Init(sq string) error {
 
 			for subTableName, subTableFields := range subTables.(map[string]interface{}) {
 
-				fmt.Println(subTableName, subTableFields)
+				//fmt.Println(subTableName, subTableFields)
 
 				statement, err := tx.Prepare(GetCreateQuery(map[string]interface{}{
 					"name":   table["name"].(string) + "_" + subTableName,

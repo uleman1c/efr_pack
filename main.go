@@ -36,13 +36,6 @@ func run() error {
 		return err
 	}
 
-	/* 	tu := tables.Copy(tables.Users)
-
-	   	tu["fields"].([]interface{})[0].(map[string]interface{})["name"] = "sdrgjkhkjhdskj"
-
-	   	fmt.Println(tu)
-	   	fmt.Println(tables.Users)
-	*/
 	return err
 
 }
