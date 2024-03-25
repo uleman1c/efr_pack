@@ -72,6 +72,7 @@ var Tables = map[string]map[string]interface{}{
 	"Containers": Containers,
 	"Barcodes":   Barcodes,
 	"MenuPlans":  MenuPlans,
+	"menu_plans": MenuPlans,
 }
 
 func Copy(sourceTable map[string]interface{}) map[string]interface{} {

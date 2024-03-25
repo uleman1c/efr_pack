@@ -3,6 +3,8 @@ package tables
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -239,7 +241,7 @@ func GetInsertQuerySub(tableName string, params map[string]interface{}) (string,
 
 }
 
-func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interface{}, top, order, group string) string {
+func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interface{}, top int, order, group []string) string {
 
 	result := ""
 
@@ -250,9 +252,19 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 
 		fields := []string{}
 
-		for _, field := range table["fields"].([]map[string]interface{}) {
+		for _, field := range table["fields"].([]interface{}) {
 
-			fields = append(fields, tableName+"."+field["name"].(string))
+			fieldName := ""
+			switch field.(type) {
+
+			case string:
+				fieldName = field.(string)
+			case map[string]interface{}:
+				fieldName = field.(map[string]interface{})["name"].(string)
+
+			}
+
+			fields = append(fields, tableName+"."+fieldName)
 
 		}
 
@@ -268,20 +280,22 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 
 		if len(filterStrings) > 0 {
 
-			result += " WHERE " + strings.Join(filterStrings, " and ")
+			r := regexp.MustCompile("@[a-zA-Z0-9._-]+")
+
+			result += " WHERE " + r.ReplaceAllString(strings.Join(filterStrings, " and "), "?")
 
 		}
 
-		if group != "" {
-			result += " GROUP BY " + group
+		if len(group) > 0 {
+			result += " GROUP BY " + strings.Join(group, ",")
 		}
 
-		if order != "" {
-			result += " ORDER BY " + order
+		if len(order) > 0 {
+			result += " ORDER BY " + strings.Join(order, ",")
 		}
 
-		if top != "" {
-			result += " LIMIT " + top
+		if top != 0 {
+			result += " LIMIT " + strconv.Itoa(top)
 		} else {
 
 			result += " LIMIT 20"
@@ -368,7 +382,7 @@ func GetQueryResult(queryStr string, params []interface{}) ([]interface{}, error
 
 }
 
-func GetTableWithParams(table map[string]interface{}, filter []map[string]interface{}, top, order, group string) ([]map[string]interface{}, error) {
+func GetTableWithParams(table map[string]interface{}, filter []map[string]interface{}, top int, order, group []string) ([]map[string]interface{}, error) {
 
 	var err error = nil
 
@@ -436,43 +450,83 @@ func GetTableWithParams(table map[string]interface{}, filter []map[string]interf
 
 }
 
-func GetTableData(table map[string]interface{}) ([]map[string]interface{}, error) {
+func GetTableData(inpTable map[string]interface{}) ([]map[string]interface{}, error) {
+
+	table := map[string]interface{}{
+		"name": inpTable["name"].(string),
+	}
+
+	_, ok := inpTable["fields"]
+	if ok {
+		table["fields"] = inpTable["fields"]
+	} else {
+		table["name"] = Tables[inpTable["name"].(string)]["name"]
+		table["fields"] = Tables[inpTable["name"].(string)]["fields"]
+	}
 
 	filter := []map[string]interface{}{}
 
-	filterStr := ""
-	_, ok := table["filter"]
+	_, ok = inpTable["filter"]
 	if ok {
-		filterStr = table["filter"].(string)
-	}
 
-	if filterStr != "" {
+		for _, filterEl := range inpTable["filter"].([]interface{}) {
 
-		kv := strings.Split(filterStr, " eq ")
+			filter = append(filter, filterEl.(map[string]interface{}))
 
-		filter = append(filter, map[string]interface{}{"text": kv[0] + " = ?", "parameter": map[string]interface{}{"name": kv[0], "value": kv[1]}})
+		}
 
 	}
 
-	top := ""
-	_, ok = table["top"]
+	var top int = 20
+	_, ok = inpTable["top"]
 	if ok {
-		top = table["top"].(string)
+
+		switch inpTable["top"].(type) {
+		case string:
+			top, _ = strconv.Atoi(inpTable["top"].(string))
+		case int:
+			top = inpTable["top"].(int)
+		case float64:
+			top = int(inpTable["top"].(float64))
+		}
+
 	}
 
-	order := ""
-	_, ok = table["order"]
+	var order = []string{}
+	_, ok = inpTable["order"]
 	if ok {
-		order = table["order"].(string)
+		switch inpTable["order"].(type) {
+		case string:
+			order = append(order, inpTable["order"].(string))
+		case []interface{}:
+
+			for _, orderEl := range inpTable["order"].([]interface{}) {
+
+				order = append(order, orderEl.(string))
+
+			}
+
+		}
 	}
 
-	group := ""
-	_, ok = table["group"]
+	group := []string{}
+	_, ok = inpTable["group"]
 	if ok {
-		group = table["group"].(string)
+		switch inpTable["group"].(type) {
+		case string:
+			group = append(group, inpTable["group"].(string))
+		case []interface{}:
+
+			for _, groupEl := range inpTable["group"].([]interface{}) {
+
+				group = append(group, groupEl.(string))
+
+			}
+
+		}
 	}
 
-	return GetTableWithParams(Tables[table["name"].(string)], filter, top, order, group)
+	return GetTableWithParams(table, filter, top, order, group)
 
 }
 
@@ -1109,267 +1163,6 @@ func GetTable(table *tables.Table) []Constant {
 
 		rows.Scan(&result[len(result)-1].Id, &result[len(result)-1].Name, &result[len(result)-1].Value)
 
-	}
-
-	return result
-
-}
-
-func GetTableWithParams(table *tables.Table, filter []tables.Filter, top, order, group string) []map[string]interface{} {
-
-	result := make([]map[string]interface{}, 0)
-
-	tx, err := Db.Begin()
-	if err != nil {
-		fmt.Printf("begin. Exec error=%s", err)
-		return result
-	}
-
-	defer tx.Commit()
-
-	statement, err := tx.Prepare(tables.GetSelectQueryTOG(table, filter, top, order, group))
-
-	cp := tables.GetParamsValuesFromFilter(filter)
-
-	var rows *sql.Rows = nil
-
-	rows, err = statement.Query(cp...)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer rows.Close()
-
-	lenRecord := tables.FieldsCount(table)
-
-	for rows.Next() {
-
-		item := make([]interface{}, lenRecord)
-
-		switch lenRecord {
-		case 1:
-			{
-
-				rows.Scan(&item[0])
-
-			}
-		case 2:
-			{
-
-				rows.Scan(&item[0], &item[1])
-
-			}
-		case 3:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2])
-
-			}
-		case 4:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3])
-
-			}
-		case 5:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4])
-
-			}
-		case 6:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5])
-
-			}
-		case 7:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6])
-
-			}
-		case 8:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7])
-
-			}
-		case 9:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8])
-
-			}
-		case 10:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9])
-
-			}
-		case 11:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10])
-
-			}
-		case 12:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11])
-
-			}
-		case 13:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11], &item[12])
-
-			}
-		case 14:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9], &item[10], &item[11], &item[12], &item[13])
-
-			}
-		case 15:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-					&item[10], &item[11], &item[12], &item[13], &item[14])
-
-			}
-		case 16:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-					&item[10], &item[11], &item[12], &item[13], &item[14], &item[15])
-
-			}
-		case 17:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-					&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16])
-
-			}
-		case 18:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-					&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17])
-
-			}
-		case 19:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-					&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17], &item[18])
-
-			}
-		case 20:
-			{
-
-				rows.Scan(&item[0], &item[1], &item[2], &item[3], &item[4], &item[5], &item[6], &item[7], &item[8], &item[9],
-					&item[10], &item[11], &item[12], &item[13], &item[14], &item[15], &item[16], &item[17], &item[18], &item[19])
-
-			}
-		}
-
-		rec := map[string]interface{}{}
-
-		for i, field := range tables.GetFields(table) {
-
-			rec[field] = item[i]
-
-		}
-
-		result = append(result, rec)
-		//fmt.Println(result)
-
-	}
-
-	return result
-
-}
-
-func GetTableData(table map[string]interface{}) []map[string]interface{} {
-
-	result := []map[string]interface{}{}
-
-	filter := []tables.Filter{}
-
-	filterStr := ""
-	_, ok := table["filter"]
-	if ok {
-		filterStr = table["filter"].(string)
-	}
-
-	if filterStr != "" {
-
-		kv := strings.Split(filterStr, " eq ")
-
-		filter = append(filter, tables.Filter{Text: kv[0] + " = ?", TypE: "TEXT", Parameter: tables.Parameter{Name: kv[0], Value: kv[1]}})
-
-	}
-
-	top := ""
-	_, ok = table["top"]
-	if ok {
-		top = table["top"].(string)
-	}
-
-	order := ""
-	_, ok = table["order"]
-	if ok {
-		order = table["order"].(string)
-	}
-
-	group := ""
-	_, ok = table["group"]
-	if ok {
-		group = table["group"].(string)
-	}
-
-	var tTable *tables.Table = nil
-
-	switch table["name"].(string) {
-	case "Constants":
-		tTable = &tables.Constants
-	case "Users":
-		tTable = &tables.Users
-	case "WarehouseUsers":
-		tTable = &tables.WarehouseUsers
-	case "Products":
-		tTable = &tables.Products
-	case "Characteristics":
-		tTable = &tables.Characteristics
-	case "Units":
-		tTable = &tables.Units
-	case "Cells":
-		tTable = &tables.Cells
-	case "Containers":
-		tTable = &tables.Containers
-	case "Leftovers":
-		tTable = &tables.Leftovers
-	case "DctMenuSettings":
-		tTable = &tables.DctMenuSettings
-	case "AccessGroups":
-		tTable = &tables.AccessGroups
-	case "Navigation":
-		tTable = &tables.Navigation
-	case "Partners":
-		tTable = &tables.Partners
-	case "Contractors":
-		tTable = &tables.Contractors
-	case "CustomerOrders":
-		tTable = &tables.CustomerOrders
-	case "OutcomeOrders":
-		tTable = &tables.OutcomeOrders
-	}
-
-	if tTable != nil {
-
-		result = GetTableWithParams(tTable, filter, top, order, group)
 	}
 
 	return result

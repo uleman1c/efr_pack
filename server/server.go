@@ -51,6 +51,23 @@ func Start() error {
 
 	})
 
+	http.HandleFunc("/menuplans/", func(response http.ResponseWriter, request *http.Request) {
+
+		res := ""
+
+		switch strings.ReplaceAll(request.RequestURI, "/menuplans/", "") {
+
+		case "":
+			res = "/index.html"
+		default:
+			res = request.RequestURI
+
+		}
+
+		http.ServeFile(response, request, "./dist"+res)
+
+	})
+
 	http.HandleFunc("/assets/", func(response http.ResponseWriter, request *http.Request) {
 
 		http.ServeFile(response, request, "./dist"+request.RequestURI)
@@ -59,38 +76,84 @@ func Start() error {
 
 	http.HandleFunc("/srv/gettable", func(response http.ResponseWriter, request *http.Request) {
 
+		response.Header().Set("Access-Control-Allow-Origin", "*")
+		response.Header().Set("Access-Control-Allow-Credentials", "true")
+		response.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
+		response.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
+
+		var tm map[string]interface{}
+
 		if request.Method == "GET" {
 
 			ue, _ := url.QueryUnescape(request.URL.RawQuery)
 
-			tm := StrToMap(ue, "&")
+			tm = StrToMap(ue, "&")
 
-			var js []byte = make([]byte, 0)
+			filter := []map[string]interface{}{}
 
-			_, ok := tm["name"]
+			filterStr := ""
+			_, ok := tm["filter"]
 			if ok {
+				filterStr = tm["filter"].(string)
+			}
 
-				rows, err := tables.GetTableData(tm)
+			if filterStr != "" {
 
-				if err != nil {
+				kv := strings.Split(filterStr, " eq ")
 
-					js, _ = json.Marshal(err)
-
-				} else {
-
-					js, _ = json.Marshal(rows)
-				}
-			} else {
-
-				js, err = json.Marshal(map[string]interface{}{
-					"error": "name required",
+				filter = append(filter, map[string]interface{}{
+					"text": kv[0] + " = ?",
+					"parameter": map[string]interface{}{
+						"name":  kv[0],
+						"value": kv[1],
+					},
 				})
 
 			}
-			response.Header().Set("Content-Type", "application/json")
-			response.Write(js)
+
+			tm["filter"] = filter
+
+		} else if request.Method == "POST" {
+
+			err := json.NewDecoder(request.Body).Decode(&tm)
+			if err != nil {
+				http.Error(response, err.Error(), http.StatusBadRequest)
+				return
+			}
 
 		}
+
+		var js []byte = make([]byte, 0)
+
+		_, ok := tm["name"]
+		if ok {
+
+			rows, err := tables.GetTableData(tm)
+
+			if err != nil {
+
+				js, _ = json.Marshal(map[string]interface{}{
+					"success": false,
+					"message": err,
+				})
+
+			} else {
+
+				js, _ = json.Marshal(map[string]interface{}{
+					"success": true,
+					"result":  rows,
+				})
+			}
+		} else {
+
+			js, err = json.Marshal(map[string]interface{}{
+				"success": false,
+				"message": "name required",
+			})
+
+		}
+		response.Header().Set("Content-Type", "application/json")
+		response.Write(js)
 
 	})
 
