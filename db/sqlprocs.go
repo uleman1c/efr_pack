@@ -251,39 +251,22 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 
 		fields := []string{}
 
-		for _, field := range table["fields"].([]interface{}) {
+		switch table["fields"].(type) {
 
-			refTable := ""
+		case []interface{}:
 
-			fieldName := ""
-			switch field.(type) {
+			for _, field := range table["fields"].([]interface{}) {
 
-			case string:
-				fieldName = field.(string)
-			case map[string]interface{}:
-				fieldName = field.(map[string]interface{})["name"].(string)
-
-				_, ok := field.(map[string]interface{})["table"]
-
-				if ok {
-					refTable = field.(map[string]interface{})["table"].(string)
-				}
+				fields, joins = getFieldsJoins(field, fields, tableName, joins)
 
 			}
+		case []map[string]interface{}:
 
-			fields = append(fields, tableName+"."+fieldName)
+			for _, field := range table["fields"].([]map[string]interface{}) {
 
-			if refTable != "" {
-
-				refAlias := refTable + strconv.Itoa(len(joins))
-
-				joins = append(joins, map[string]string{
-					"field": refAlias + ".name as " + fieldName + "_str",
-					"table": "left join " + refTable + " as " + refAlias + " on " + tableName + "." + fieldName + " = " + refAlias + ".id",
-				})
+				fields, joins = getFieldsJoins(field, fields, tableName, joins)
 
 			}
-
 		}
 
 		joinTables := []string{}
@@ -339,6 +322,40 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 
 	return result
 
+}
+
+func getFieldsJoins(field interface{}, fields []string, tableName string, joins []map[string]string) ([]string, []map[string]string) {
+	refTable := ""
+
+	fieldName := ""
+	switch field.(type) {
+
+	case string:
+		fieldName = field.(string)
+	case map[string]interface{}:
+		fieldName = field.(map[string]interface{})["name"].(string)
+
+		_, ok := field.(map[string]interface{})["table"]
+
+		if ok {
+			refTable = field.(map[string]interface{})["table"].(string)
+		}
+
+	}
+
+	fields = append(fields, tableName+"."+fieldName)
+
+	if refTable != "" {
+
+		refAlias := refTable + strconv.Itoa(len(joins))
+
+		joins = append(joins, map[string]string{
+			"field": refAlias + ".name as " + fieldName + "_str",
+			"table": "left join " + refTable + " as " + refAlias + " on " + tableName + "." + fieldName + " = " + refAlias + ".id",
+		})
+
+	}
+	return fields, joins
 }
 
 func GetParamsValuesFromFilter(filters []map[string]interface{}) []interface{} {
@@ -503,9 +520,29 @@ func GetTableData(inpTable map[string]interface{}) ([]map[string]interface{}, er
 	_, ok = inpTable["filter"]
 	if ok {
 
-		for _, filterEl := range inpTable["filter"].([]interface{}) {
+		switch inpTable["filter"].(type) {
 
-			filter = append(filter, filterEl.(map[string]interface{}))
+		case []interface{}:
+			{
+
+				for _, filterEl := range inpTable["filter"].([]interface{}) {
+
+					filter = append(filter, filterEl.(map[string]interface{}))
+
+				}
+
+			}
+
+		case []map[string]interface{}:
+			{
+
+				for _, filterEl := range inpTable["filter"].([]map[string]interface{}) {
+
+					filter = append(filter, filterEl)
+
+				}
+
+			}
 
 		}
 
@@ -566,7 +603,24 @@ func GetTableData(inpTable map[string]interface{}) ([]map[string]interface{}, er
 
 		for _, joinsEl := range inpTable["joins"].([]interface{}) {
 
-			joins = append(joins, joinsEl.(map[string]string))
+			switch joinsEl.(type) {
+
+			case map[string]string:
+				joins = append(joins, joinsEl.(map[string]string))
+
+			case map[string]interface{}:
+
+				jel := map[string]string{
+					"field": "",
+					"table": "",
+				}
+
+				jel["field"] = joinsEl.(map[string]interface{})["field"].(string)
+				jel["table"] = joinsEl.(map[string]interface{})["table"].(string)
+
+				joins = append(joins, jel)
+
+			}
 
 		}
 
@@ -585,7 +639,10 @@ func ExecQuery(query string, filter []map[string]interface{}) error {
 
 	defer tx.Commit()
 
-	statement, _ := tx.Prepare(query)
+	statement, err := tx.Prepare(query)
+	if err != nil {
+		return err
+	}
 
 	params := GetParamsValuesFromFilter(filter)
 

@@ -243,7 +243,6 @@ func loadObject(change map[string]interface{}) (map[string]interface{}, error) {
 					result["id"] = reqvisits
 
 					params := map[string]interface{}{}
-					params["id"] = uuid.New().String()
 					params["barcode"] = reqvisits["Штрихкод"]
 					params["product_id"] = reqvisits["Владелец"].(map[string]interface{})["Ссылка"].(string)
 
@@ -270,8 +269,85 @@ func loadObject(change map[string]interface{}) (map[string]interface{}, error) {
 						return result, err
 					}
 
-					err = UpdateObject(Tables["Barcodes"], params)
+					for _, rec := range change["Записи"].([]interface{}) {
 
+						params["id"] = uuid.New().String()
+						params["barcode"] = rec.(map[string]interface{})["Штрихкод"]
+						params["product_id"] = rec.(map[string]interface{})["Владелец"].(map[string]interface{})["Ссылка"].(string)
+
+						err = UpdateObject(Tables["Barcodes"], params)
+
+					}
+
+				}
+			case "ОтсканированныеШтрихкоды":
+				{
+
+					/* 					var Scanned = map[string]interface{}{
+
+					   						"name": "scanned",
+					   						"fields": []map[string]interface{}{
+
+					   							{"name": "id", "type": "char", "length": 36},
+					   							{"name": "date", "type": "char", "length": 14},
+					   							{"name": "milliseconds", "type": "int", "length": 2},
+					   							{"name": "barcode", "type": "char", "length": 150},
+					   							{"name": "container_id", "type": "char", "length": 36},
+					   							{"name": "menu_plan_id", "type": "char", "length": 36},
+					   						},
+					   					}
+					*/
+
+					result["name"] = "ОтсканированныеШтрихкоды"
+
+					reqvisits := change["Отбор"].(map[string]interface{})
+
+					result["id"] = reqvisits
+
+					params := map[string]interface{}{}
+					params["id"] = uuid.New().String()
+					params["date"] = reqvisits["Период"]
+					params["milliseconds"] = reqvisits["Миллисекунд"]
+					params["barcode"] = reqvisits["Штрихкод"]
+
+					filters := []map[string]interface{}{
+						{
+							"text": "date = ?",
+							"parameter": map[string]interface{}{
+								"name":  "date",
+								"value": params["date"],
+							},
+						},
+						{
+							"text": "milliseconds = ?",
+							"parameter": map[string]interface{}{
+								"name":  "milliseconds",
+								"value": params["milliseconds"],
+							},
+						},
+						{
+							"text": "barcode = ?",
+							"parameter": map[string]interface{}{
+								"name":  "barcode",
+								"value": params["barcode"],
+							},
+						},
+					}
+
+					err = ExecQuery(GetDeleteQuery(Tables["Scanned"]["name"].(string), filters), filters)
+
+					if err != nil {
+						return result, err
+					}
+
+					for _, rec := range change["Записи"].([]interface{}) {
+
+						params["id"] = uuid.New().String()
+						params["container_id"] = rec.(map[string]interface{})["Контейнер"].(map[string]interface{})["Ссылка"].(string)
+						params["menu_plan_id"] = rec.(map[string]interface{})["ПланМеню"].(map[string]interface{})["Ссылка"].(string)
+
+						err = UpdateObject(Tables["Scanned"], params)
+					}
 				}
 			}
 		}

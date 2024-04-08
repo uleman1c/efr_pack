@@ -89,7 +89,7 @@ func Start() error {
 
 			tm = StrToMap(ue, "&")
 
-			filter := []map[string]interface{}{}
+			filter := []interface{}{}
 
 			filterStr := ""
 			_, ok := tm["filter"]
