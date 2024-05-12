@@ -165,6 +165,12 @@ func Start() error {
 
 	})
 
+	http.HandleFunc("/srv/insertrecord", func(response http.ResponseWriter, request *http.Request) {
+
+		httphandlers.HandleFunc(response, request, tables.InsertRecord)
+
+	})
+
 	/* 	http.HandleFunc("/user", func(response http.ResponseWriter, request *http.Request) {
 
 	   		if request.Method == "GET" {

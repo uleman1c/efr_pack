@@ -167,13 +167,26 @@ func GetInsertQuery(table map[string]interface{}) string {
 		fields := []string{}
 		values := []string{}
 
-		for _, field := range table["fields"].([]map[string]interface{}) {
+		switch table["fields"].(type) {
 
-			fields = append(fields, field["name"].(string))
-			values = append(values, "?")
+		case []interface{}:
 
+			for _, field := range table["fields"].([]interface{}) {
+
+				fields = append(fields, field.(map[string]interface{})["name"].(string))
+				values = append(values, "?")
+
+			}
+
+		case []map[string]interface{}:
+
+			for _, field := range table["fields"].([]map[string]interface{}) {
+
+				fields = append(fields, field["name"].(string))
+				values = append(values, "?")
+
+			}
 		}
-
 		result = "INSERT INTO " + table["name"].(string) + " (" + strings.Join(fields, ",") + ") VALUES (" + strings.Join(values, ",") + ")"
 
 	}
@@ -697,6 +710,32 @@ func ExecQuery(query string, filter []map[string]interface{}) error {
 	}
 
 	return nil
+
+}
+
+func InsertRecord(in map[string]interface{}) (map[string]interface{}, error) {
+
+	res := map[string]interface{}{
+		"success": true,
+		"message": "",
+		"result":  []map[string]interface{}{},
+	}
+
+	table := map[string]interface{}{
+		"name": in["name"].(string),
+	}
+
+	_, ok := in["fields"]
+	if ok {
+		table["fields"] = in["fields"]
+	} else {
+		table["name"] = Tables[in["name"].(string)]["name"]
+		table["fields"] = Tables[in["name"].(string)]["fields"]
+	}
+
+	InsertInTable(table, in["record"].(map[string]interface{}))
+
+	return res, nil
 
 }
 

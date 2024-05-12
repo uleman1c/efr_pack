@@ -423,12 +423,25 @@ func InsertInTable(table, params map[string]interface{}) error {
 	}
 
 	sqlParams := []interface{}{}
-	for _, tableField := range table["fields"].([]map[string]interface{}) {
 
-		sqlParams = append(sqlParams, params[tableField["name"].(string)])
+	switch table["fields"].(type) {
 
+	case []interface{}:
+
+		for _, field := range table["fields"].([]interface{}) {
+
+			sqlParams = append(sqlParams, params[field.(map[string]interface{})["name"].(string)])
+
+		}
+
+	case []map[string]interface{}:
+
+		for _, tableField := range table["fields"].([]map[string]interface{}) {
+
+			sqlParams = append(sqlParams, params[tableField["name"].(string)])
+
+		}
 	}
-
 	_, err = statement.Exec(sqlParams...)
 
 	if err != nil {
