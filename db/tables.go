@@ -90,18 +90,31 @@ var MenuPlans = map[string]interface{}{
 	},
 }
 
+var ObjectsToSend = map[string]interface{}{
+
+	"name": "objectstosend",
+	"fields": []map[string]interface{}{
+
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "name", "type": "char", "length": 150},
+		{"name": "object_id", "type": "char", "length": 36},
+	},
+}
+
 var Tables = map[string]map[string]interface{}{
 
-	"Constants":  Constants,
-	"constants":  Constants,
-	"Users":      Users,
-	"Products":   Products,
-	"Containers": Containers,
-	"Barcodes":   Barcodes,
-	"MenuPlans":  MenuPlans,
-	"menu_plans": MenuPlans,
-	"Scanned":    Scanned,
-	"scanned":    Scanned,
+	"Constants":     Constants,
+	"constants":     Constants,
+	"Users":         Users,
+	"Products":      Products,
+	"Containers":    Containers,
+	"Barcodes":      Barcodes,
+	"MenuPlans":     MenuPlans,
+	"menu_plans":    MenuPlans,
+	"Scanned":       Scanned,
+	"scanned":       Scanned,
+	"ObjectsToSend": ObjectsToSend,
+	"objectstosend": ObjectsToSend,
 }
 
 func Copy(sourceTable map[string]interface{}) map[string]interface{} {
