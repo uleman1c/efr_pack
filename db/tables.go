@@ -108,6 +108,7 @@ var Tables = map[string]map[string]interface{}{
 	"Users":         Users,
 	"Products":      Products,
 	"Containers":    Containers,
+	"containers":    Containers,
 	"Barcodes":      Barcodes,
 	"MenuPlans":     MenuPlans,
 	"menu_plans":    MenuPlans,
