@@ -171,83 +171,12 @@ func Start() error {
 
 	})
 
-	/* 	http.HandleFunc("/user", func(response http.ResponseWriter, request *http.Request) {
+	http.HandleFunc("/srv/insertrecords", func(response http.ResponseWriter, request *http.Request) {
 
-	   		if request.Method == "GET" {
+		httphandlers.HandleFunc(response, request, tables.InsertRecords)
 
-	   			js, _ := json.Marshal(getUser())
+	})
 
-	   			response.Header().Set("Content-Type", "application/json")
-	   			response.Write(js)
-
-	   		}
-
-	   	})
-
-	   	http.HandleFunc("/constants", func(response http.ResponseWriter, request *http.Request) {
-
-	   		if request.Method == "GET" {
-
-	   			ue, _ := url.QueryUnescape(request.URL.RawQuery)
-
-	   			tm := StrToMap(ue, "&")
-
-	   			fmt.Println(tm)
-
-	   			rows := database.GetTable(&tables.Constants)
-
-	   			js, _ := json.Marshal(rows)
-
-	   			response.Header().Set("Content-Type", "application/json")
-	   			response.Write(js)
-
-	   		}
-
-	   	})
-
-	   	http.HandleFunc("/alltables", func(response http.ResponseWriter, request *http.Request) {
-
-	   		if request.Method == "GET" {
-
-	   			ue, _ := url.QueryUnescape(request.URL.RawQuery)
-
-	   			tm := StrToMap(ue, "&")
-
-	   			fmt.Println(tm)
-
-	   			rows, _ := database.GetQueryResult("SELECT name FROM sqlite_master WHERE type='table'", []string{"name"}, []interface{}{})
-
-	   			js, _ := json.Marshal(rows)
-
-	   			response.Header().Set("Content-Type", "application/json")
-	   			response.Write(js)
-
-	   		}
-
-	   	})
-
-	   	http.HandleFunc("/whdct", func(response http.ResponseWriter, request *http.Request) {
-
-	   		if request.Method == "GET" {
-
-	   			ue, _ := url.QueryUnescape(request.URL.RawQuery)
-
-	   			tm := StrToMap(ue, "&")
-
-	   			result := map[string]interface{}{}
-	   			result["success"] = true
-	   			result["responses"] = make([]map[string]interface{}, 1)
-
-	   			result["responses"].([]map[string]interface{})[0] = responseToRequest(tm)
-
-	   			js, _ := json.Marshal(result)
-
-	   			response.Header().Set("Content-Type", "application/json")
-	   			response.Write(js)
-
-	   		}
-	   	})
-	*/
 	http.ListenAndServe(":8001", nil)
 
 	return err

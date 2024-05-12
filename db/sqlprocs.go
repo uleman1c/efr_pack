@@ -739,6 +739,36 @@ func InsertRecord(in map[string]interface{}) (map[string]interface{}, error) {
 
 }
 
+func InsertRecords(in map[string]interface{}) (map[string]interface{}, error) {
+
+	res := map[string]interface{}{
+		"success": true,
+		"message": "",
+		"result":  []map[string]interface{}{},
+	}
+
+	table := map[string]interface{}{
+		"name": in["name"].(string),
+	}
+
+	_, ok := in["fields"]
+	if ok {
+		table["fields"] = in["fields"]
+	} else {
+		table["name"] = Tables[in["name"].(string)]["name"]
+		table["fields"] = Tables[in["name"].(string)]["fields"]
+	}
+
+	for _, record := range in["records"].([]interface{}) {
+
+		InsertInTable(table, record.(map[string]interface{}))
+
+	}
+
+	return res, nil
+
+}
+
 /*
 func GetConstantValue(name string) (*string, error) {
 
