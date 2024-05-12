@@ -182,6 +182,36 @@ func GetInsertQuery(table map[string]interface{}) string {
 
 }
 
+func GetUpdateQuery(table map[string]interface{}, filter []map[string]interface{}) string {
+
+	result := ""
+
+	switch SqlType {
+	case "sqlite":
+
+		fields := []string{}
+		filterFields := []string{}
+
+		for key, _ := range table["record"].(map[string]interface{}) {
+
+			fields = append(fields, key+" = ?")
+
+		}
+
+		for _, filterField := range table["filter"].([]map[string]interface{}) {
+
+			filterFields = append(filterFields, filterField["text"].(string))
+
+		}
+
+		result = "UPDATE " + table["name"].(string) + " set " + strings.Join(fields, ",") + " where " + strings.Join(filterFields, " and ")
+
+	}
+
+	return result
+
+}
+
 func GetDeleteQuery(tableName string, filters []map[string]interface{}) string {
 
 	result := ""

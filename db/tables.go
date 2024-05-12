@@ -1,5 +1,16 @@
 package tables
 
+var Constants = map[string]interface{}{
+
+	"name": "constants",
+	"fields": []map[string]interface{}{
+
+		{"name": "id", "type": "char", "length": 36},
+		{"name": "name", "type": "char", "length": 50},
+		{"name": "value", "type": "char", "length": 200},
+	},
+}
+
 var Users = map[string]interface{}{
 
 	"name": "users",
@@ -81,6 +92,8 @@ var MenuPlans = map[string]interface{}{
 
 var Tables = map[string]map[string]interface{}{
 
+	"Constants":  Constants,
+	"constants":  Constants,
 	"Users":      Users,
 	"Products":   Products,
 	"Containers": Containers,

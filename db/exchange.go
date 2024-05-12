@@ -26,6 +26,8 @@ func redirectPolicyFunc(req *http.Request, via []*http.Request) error {
 
 func GetChangesFromCentral() error {
 
+	UpdateConstant("exchange_in_progress", "1")
+
 	var err error = nil
 
 	//whid, _ := GetConstantValue("warehouse_id")
@@ -113,6 +115,8 @@ func GetChangesFromCentral() error {
 		}
 
 	}
+
+	UpdateConstant("exchange_in_progress", "0")
 
 	return err
 
@@ -357,6 +361,21 @@ func loadObject(change map[string]interface{}) (map[string]interface{}, error) {
 
 func existsById(table map[string]interface{}, id string) (bool, error) {
 
+	constFilter := []map[string]interface{}{
+		{
+			"text": "id = ?",
+			"parameter": map[string]interface{}{
+				"value": id,
+			},
+		},
+	}
+
+	return existsByFilter(table, constFilter)
+
+}
+
+func existsByFilter(table map[string]interface{}, filter []map[string]interface{}) (bool, error) {
+
 	tx, err := Db.Begin()
 	if err != nil {
 
@@ -366,20 +385,15 @@ func existsById(table map[string]interface{}, id string) (bool, error) {
 
 	defer tx.Commit()
 
-	constFilter := []map[string]interface{}{
-		{
-			"text":      "id = ?",
-			"parameter": id,
-		},
-	}
-
-	statement, err := tx.Prepare(GetSelectQuery(table, constFilter))
+	statement, err := tx.Prepare(GetSelectQuery(table, filter))
 
 	if err != nil {
 		return false, err
 	}
 
-	rows, err := statement.Query(id)
+	cp := GetParamsValuesFromFilter(filter)
+
+	rows, err := statement.Query(cp...)
 
 	if err != nil {
 		return false, err
@@ -390,6 +404,133 @@ func existsById(table map[string]interface{}, id string) (bool, error) {
 	defer rows.Close()
 
 	return exist, err
+
+}
+
+func InsertInTable(table, params map[string]interface{}) error {
+
+	tx, err := Db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Commit()
+
+	statement, err := tx.Prepare(GetInsertQuery(table))
+
+	if err != nil {
+		return err
+	}
+
+	sqlParams := []interface{}{}
+	for _, tableField := range table["fields"].([]map[string]interface{}) {
+
+		sqlParams = append(sqlParams, params[tableField["name"].(string)])
+
+	}
+
+	_, err = statement.Exec(sqlParams...)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func UpdateInTable(table map[string]interface{}) error {
+
+	tx, err := Db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Commit()
+
+	statement, err := tx.Prepare(GetUpdateQuery(table, table["filter"].([]map[string]interface{})))
+
+	if err != nil {
+		return err
+	}
+
+	sqlParams := []interface{}{}
+	for _, tableField := range table["record"].(map[string]interface{}) {
+
+		sqlParams = append(sqlParams, tableField)
+
+	}
+
+	for _, tableField := range table["filter"].([]map[string]interface{}) {
+
+		sqlParams = append(sqlParams, tableField["parameter"].(map[string]interface{})["value"])
+
+	}
+	_, err = statement.Exec(sqlParams...)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func UpdateConstant(name, value string) error {
+
+	inpTable := map[string]interface{}{
+		"name": "Constants",
+		"filter": map[string]interface{}{
+			"name": name,
+		},
+	}
+
+	rows, err := GetTableData(inpTable)
+
+	if err != nil {
+
+		return err
+
+	}
+
+	if len(rows) > 0 {
+
+		curId := rows[0]["id"].(string)
+
+		if curId != value {
+
+			inpTable["filter"] = []map[string]interface{}{
+				{
+					"text": "id = ?",
+					"parameter": map[string]interface{}{
+						"value": curId,
+					},
+				},
+			}
+
+			inpTable["record"] = map[string]interface{}{
+				"value": value,
+			}
+
+			return UpdateInTable(inpTable)
+
+		} else {
+
+			return nil
+
+		}
+
+	} else {
+
+		params := map[string]interface{}{
+			"id":    uuid.New().String(),
+			"name":  name,
+			"value": value,
+		}
+
+		return InsertInTable(Constants, params)
+
+	}
 
 }
 

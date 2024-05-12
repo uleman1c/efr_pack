@@ -2,6 +2,8 @@ package server
 
 import (
 	tables "efr_pack/db"
+	"efr_pack/server/exchange"
+	"efr_pack/server/httphandlers"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -154,6 +156,12 @@ func Start() error {
 		}
 		response.Header().Set("Content-Type", "application/json")
 		response.Write(js)
+
+	})
+
+	http.HandleFunc("/srv/startexch", func(response http.ResponseWriter, request *http.Request) {
+
+		httphandlers.HandleFunc(response, request, exchange.StartExchange)
 
 	})
 

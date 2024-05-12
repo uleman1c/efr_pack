@@ -3,6 +3,7 @@ package main
 import (
 	tables "efr_pack/db"
 	"efr_pack/server"
+	"efr_pack/server/exchange"
 	"log"
 )
 
@@ -26,10 +27,9 @@ func run() error {
 		return err
 	}
 
-	err = tables.GetChangesFromCentral()
-	if err != nil {
-		return err
-	}
+	tables.UpdateConstant("exchange_in_progress", "0")
+
+	exchange.StartExchange(nil)
 
 	err = server.Start()
 	if err != nil {
