@@ -355,6 +355,9 @@ func GetSelectQueryTOG(table map[string]interface{}, filters []map[string]interf
 }
 
 func getFieldsJoins(field interface{}, fields []string, tableName string, joins []map[string]string) ([]string, []map[string]string) {
+
+	ifFunc := false
+
 	refTable := ""
 
 	fieldName := ""
@@ -371,9 +374,20 @@ func getFieldsJoins(field interface{}, fields []string, tableName string, joins 
 			refTable = field.(map[string]interface{})["table"].(string)
 		}
 
+		_, ok = field.(map[string]interface{})["func"]
+
+		if ok {
+			ifFunc = field.(map[string]interface{})["func"].(bool)
+		}
+
 	}
 
-	fields = append(fields, tableName+"."+fieldName)
+	curField := tableName + "." + fieldName
+	if ifFunc {
+		curField = fieldName
+	}
+
+	fields = append(fields, curField)
 
 	if refTable != "" {
 
